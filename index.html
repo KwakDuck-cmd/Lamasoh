@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>LAMA : Existence Arena</title>
+
+<style>
+body {
+  margin: 0;
+  background: #050505;
+  color: #fff;
+  text-align: center;
+  font-family: sans-serif;
+}
+
+canvas {
+  display: none;
+  margin: auto;
+  background: #111;
+}
+
+button {
+  padding: 12px;
+  font-size: 14px;
+}
+
+.hud {
+  display: none;
+  justify-content: space-around;
+  margin: 6px 0;
+}
+
+.controls {
+  position: fixed;
+  bottom: 10px;
+  width: 100%;
+  display: none;
+}
+
+#joystick {
+  width: 90px;
+  height: 90px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 50%;
+  position: absolute;
+  left: 20px;
+  bottom: 10px;
+}
+
+.buttons {
+  position: absolute;
+  right: 20px;
+  bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+footer {
+  font-size: 10px;
+  opacity: 0.6;
+  margin-top: 6px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>LAMA : Existence Arena</h2>
+
+<button id="startBtn">START</button>
+
+<canvas id="gameCanvas" width="360" height="640"></canvas>
+
+<div class="hud">
+  <div>HP <span id="hp">100</span></div>
+  <div>ANG <span id="ang">10</span></div>
+  <div>þ <span id="anxiety">3</span></div>
+  <div>STATE <span id="state">1</span></div>
+</div>
+
+<div class="controls">
+  <div id="joystick"></div>
+  <div class="buttons">
+    <button id="atk">ATK</button>
+    <button id="skill">SKILL</button>
+    <button id="ult">ULT</button>
+  </div>
+</div>
+
+<footer>이 게임은 목연우에게 헌정됩니다.</footer>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+const player = {
+  x: 180,
+  y: 500,
+  r: 14,
+  hp: 100,
+  ang: 10,
+  anxiety: 3,
+  state: "1"
+};
+
+const enemy = {
+  x: 180,
+  y: 120,
+  r: 14,
+  hp: 80,
+  speed: 1.2
+};
+
+let playing = false;
+
+document.getElementById("startBtn").onclick = () => {
+  playing = true;
+  document.getElementById("startBtn").style.display = "none";
+  canvas.style.display = "block";
+  document.querySelector(".hud").style.display = "flex";
+  document.querySelector(".controls").style.display = "block";
+  loop();
+};
+
+let touchX = 0, touchY = 0;
+document.getElementById("joystick").addEventListener("touchmove", e => {
+  const t = e.touches[0];
+  touchX = (t.clientX - 65) / 15;
+  touchY = (t.clientY - window.innerHeight + 65) / 15;
+});
+
+document.getElementById("atk").onclick = () => {
+  const dx = enemy.x - player.x;
+  const dy = enemy.y - player.y;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  if (dist < 70) {
+    enemy.hp -= player.ang;
+    player.ang -= 1;
+  }
+};
+
+document.getElementById("skill").onclick = () => {
+  player.anxiety -= 1;
+  if (player.anxiety < 0) player.anxiety = 0;
+};
+
+document.getElementById("ult").onclick = () => {
+  if (player.ang
