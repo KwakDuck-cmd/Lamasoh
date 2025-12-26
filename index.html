@@ -6,36 +6,60 @@
 <title>LAMA : Existence Arena</title>
 
 <style>
+/* =====================
+   GLOBAL
+===================== */
 body {
   margin: 0;
   background: #050505;
   color: #fff;
   text-align: center;
   font-family: sans-serif;
+  overflow: hidden;
 }
 
-canvas {
-  display: none;
-  margin: auto;
-  background: #111;
+h2 {
+  margin: 6px 0;
 }
 
 button {
   padding: 12px;
   font-size: 14px;
+  background: #222;
+  color: #fff;
+  border: 1px solid #555;
+  border-radius: 6px;
 }
 
+/* =====================
+   CANVAS
+===================== */
+canvas {
+  display: none;
+  margin: auto;
+  background: #111;
+  touch-action: none; /* 🔑 모바일 터치 오류 핵심 해결 */
+}
+
+/* =====================
+   HUD
+===================== */
 .hud {
   display: none;
   justify-content: space-around;
   margin: 6px 0;
+  font-size: 12px;
 }
 
+/* =====================
+   CONTROLS
+===================== */
 .controls {
   position: fixed;
   bottom: 10px;
   width: 100%;
   display: none;
+  pointer-events: auto;
 }
 
 #joystick {
@@ -46,6 +70,7 @@ button {
   position: absolute;
   left: 20px;
   bottom: 10px;
+  touch-action: none;
 }
 
 .buttons {
@@ -57,10 +82,14 @@ button {
   gap: 8px;
 }
 
+.buttons button {
+  touch-action: manipulation; /* 🔑 버튼 터치 우선 처리 */
+}
+
 footer {
   font-size: 10px;
   opacity: 0.6;
-  margin-top: 6px;
+  margin-top: 4px;
 }
 </style>
 </head>
@@ -92,8 +121,16 @@ footer {
 <footer>이 게임은 목연우에게 헌정됩니다.</footer>
 
 <script>
+/* =====================
+   SETUP
+===================== */
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+
+const hp = document.getElementById("hp");
+const ang = document.getElementById("ang");
+const anxiety = document.getElementById("anxiety");
+const state = document.getElementById("state");
 
 const player = {
   x: 180,
@@ -115,36 +152,125 @@ const enemy = {
 
 let playing = false;
 
-document.getElementById("startBtn").onclick = () => {
+/* =====================
+   START
+===================== */
+document.getElementById("startBtn").addEventListener("click", () => {
   playing = true;
   document.getElementById("startBtn").style.display = "none";
   canvas.style.display = "block";
   document.querySelector(".hud").style.display = "flex";
   document.querySelector(".controls").style.display = "block";
   loop();
-};
-
-let touchX = 0, touchY = 0;
-document.getElementById("joystick").addEventListener("touchmove", e => {
-  const t = e.touches[0];
-  touchX = (t.clientX - 65) / 15;
-  touchY = (t.clientY - window.innerHeight + 65) / 15;
 });
 
-document.getElementById("atk").onclick = () => {
+/* =====================
+   JOYSTICK (TOUCH)
+===================== */
+let touchX = 0;
+let touchY = 0;
+
+const joystick = document.getElementById("joystick");
+
+joystick.addEventListener("touchstart", e => {
+  e.preventDefault();
+});
+
+joystick.addEventListener("touchmove", e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  const rect = joystick.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  touchX = (t.clientX - cx) / 20;
+  touchY = (t.clientY - cy) / 20;
+});
+
+joystick.addEventListener("touchend", () => {
+  touchX = 0;
+  touchY = 0;
+});
+
+/* =====================
+   BUTTONS
+===================== */
+document.getElementById("atk").addEventListener("touchstart", e => {
+  e.preventDefault();
   const dx = enemy.x - player.x;
   const dy = enemy.y - player.y;
   const dist = Math.sqrt(dx*dx + dy*dy);
-  if (dist < 70) {
+  if (dist < 70 && player.ang > 0) {
     enemy.hp -= player.ang;
     player.ang -= 1;
   }
-};
+});
 
-document.getElementById("skill").onclick = () => {
+document.getElementById("skill").addEventListener("touchstart", e => {
+  e.preventDefault();
   player.anxiety -= 1;
   if (player.anxiety < 0) player.anxiety = 0;
-};
+});
 
-document.getElementById("ult").onclick = () => {
-  if (player.ang
+document.getElementById("ult").addEventListener("touchstart", e => {
+  e.preventDefault();
+  if (player.ang >= 10) {
+    enemy.hp -= 25;
+    player.ang -= 10;
+    player.state = "1²";
+    setTimeout(() => player.state = "1", 1500);
+  }
+});
+
+/* =====================
+   LOOP
+===================== */
+function update() {
+  player.x += touchX;
+  player.y += touchY;
+
+  if (enemy.hp > 0) {
+    enemy.y += enemy.y < player.y ? enemy.speed : -enemy.speed;
+  }
+
+  const dx = enemy.x - player.x;
+  const dy = enemy.y - player.y;
+  if (Math.sqrt(dx*dx + dy*dy) < 30) {
+    player.hp -= 0.2;
+    player.anxiety += 0.01;
+  }
+
+  if (player.hp <= 0 || enemy.hp <= 0) {
+    alert(player.hp > 0 ? "승리! (축복)" : "패배...");
+    location.reload();
+  }
+
+  hp.innerText = Math.floor(player.hp);
+  ang.innerText = player.ang;
+  anxiety.innerText = player.anxiety.toFixed(1);
+  state.innerText = player.state;
+}
+
+function draw() {
+  ctx.clearRect(0,0,360,640);
+
+  ctx.fillStyle = player.state === "1²" ? "gold" : "cyan";
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.r, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.fillStyle = enemy.hp > 0 ? "red" : "gray";
+  ctx.beginPath();
+  ctx.arc(enemy.x, enemy.y, enemy.r, 0, Math.PI*2);
+  ctx.fill();
+}
+
+function loop() {
+  if (!playing) return;
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+</script>
+
+</body>
+</html>
